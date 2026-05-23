@@ -11,7 +11,7 @@ GATEWAY_URL = "http://127.0.0.1:5031/api/v1/push/messages"
 APP_ID = "微信"
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-ICO_PATH = os.path.join(SCRIPT_DIR, "WeMessage.ico")
+ICO_PATH = os.path.join(SCRIPT_DIR, "Weixin.ico")
 WEIXIN_PNG = os.path.join(SCRIPT_DIR, "Weixin.png")
 # win11toast icon 参数需要 file:/// 格式的本地路径
 WEIXIN_ICON_URL = "file:///" + WEIXIN_PNG.replace("\\", "/")
@@ -26,7 +26,7 @@ def setup_shortcut():
         return
 
     if not os.path.exists(ICO_PATH):
-        print("[WeMessage] 未找到 WeMessage.ico，跳过图标注册（不影响使用）")
+        print("[WeMessage] 未找到 Weixin.ico，跳过图标注册（不影响使用）")
         return
 
     pythonw = os.path.join(os.path.dirname(sys.executable), "pythonw.exe")
