@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Sensitive config (contains HEX_KEY and account path)
+config.json
+
+# Runtime diagnostic log
+worker_diag.log
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE / Editor
+.idea/
+.vscode/
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Claude Code
+.claude/
