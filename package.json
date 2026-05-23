@@ -1,16 +1,25 @@
 {
-  "name": "resources",
-  "version": "1.0.0",
-  "description": "",
-  "main": "app.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "dependencies": {
-    "koffi": "^2.16.2"
-  }
+    "name": "WeMessage",
+    "version": "1.0.0",
+    "description": "微信消息 Windows 通知助手",
+    "main": "WeMessage.js",
+    "bin": "WeMessage.js",
+    "scripts": {
+        "start": "node WeMessage.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "wechat",
+        "notification",
+        "windows"
+    ],
+    "author": "StarHeartY",
+    "license": "ISC",
+    "type": "commonjs",
+    "dependencies": {},
+    "pkg": {
+        "assets": [
+            "resources/**/*"
+        ]
+    }
 }
