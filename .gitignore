@@ -21,3 +21,6 @@ Desktop.ini
 
 # Claude Code
 .claude/
+
+#exe
+*.exe

@@ -1,4 +1,5 @@
 const { Worker } = require('worker_threads');
+const { spawn } = require('child_process');
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -41,9 +42,52 @@ const SELF_WXID = (() => {
 })();
 console.log(`[WeMessage] 自身 wxid: ${SELF_WXID}`);
 
-// ================= [ 2. 启动 WCDB Worker 线程 ] =================
-const workerPath = path.resolve(__dirname, './wcdbWorker.js');
-const worker = new Worker(workerPath);
+// ================= [ 2a. 启动 WCDB C 代理进程 ] =================
+const proxyExePath = path.resolve(__dirname, './WeFlow.exe');
+const proxyProcess = spawn(proxyExePath, [
+    '--port', '5037',
+    '--resources', CONFIG.RESOURCES_PATH
+], {
+    stdio: 'pipe',
+    windowsHide: true
+});
+
+proxyProcess.stderr.on('data', (data) => {
+    const text = data.toString('utf8');
+    process.stderr.write(`[proxy] ${text}`);
+    // 等待代理就绪信号
+    if (text.includes('READY')) {
+        console.log('[WeMessage] C 代理进程已就绪');
+        startWorker();
+    }
+});
+
+proxyProcess.on('error', (err) => {
+    console.error('[WeMessage] 无法启动 C 代理进程:', err.message);
+    console.error('请确保 WeFlow.exe 存在于项目根目录');
+    process.exit(1);
+});
+
+proxyProcess.on('exit', (code) => {
+    console.log(`[WeMessage] C 代理进程已退出 (code=${code})`);
+});
+
+// 主进程退出时清理代理
+process.on('exit', () => {
+    try { proxyProcess.kill(); } catch {}
+});
+process.on('SIGINT', () => {
+    try { proxyProcess.kill(); } catch {}
+    process.exit();
+});
+process.on('SIGTERM', () => {
+    try { proxyProcess.kill(); } catch {}
+    process.exit();
+});
+
+// ================= [ 2b. 启动 WCDB Worker 线程 ] =================
+const workerPath = path.resolve(__dirname, './wcdbProxy.js');
+let worker = null;
 
 // 消息 ID 追踪
 let messageId = 10;
@@ -65,8 +109,11 @@ let debounceTimer = null;
 const debounceMs = 500;
 let processing = false;
 
-// 监听 Worker 传上来的事件
-worker.on('message', (msg) => {
+// 监听 Worker 传上来的事件（延迟到 startWorker 中设置）
+function startWorker() {
+    worker = new Worker(workerPath);
+
+    worker.on('message', (msg) => {
     const { id, type, payload, result, error } = msg;
 
     // A. 管道监控事件：数据库有变化
@@ -123,8 +170,35 @@ worker.on('message', (msg) => {
 });
 
 worker.on('error', (err) => {
-    console.error('❌ [WeMessage] 底层解密线程发生严重错误:', err);
+    console.error('❌ [WeMessage] 底层线程发生严重错误:', err);
 });
+
+// 启动本地网关 → 链式点火
+server.listen(CONFIG.PORT, CONFIG.HOST, () => {
+    console.log('⚙️ [WeMessage] 正在从 config.json 读取配置并初始化核心驱动...');
+
+    // 第一发：注入路径
+    worker.postMessage({
+        id: 1,
+        type: 'setPaths',
+        payload: {
+            resourcesPath: CONFIG.RESOURCES_PATH,
+            userDataPath: CONFIG.ACCOUNT_DIR
+        }
+    });
+
+    // 第二发：解密开锁
+    console.log('🔑 [WeMessage] 正在尝试使用密钥解密并打开微信数据库...');
+    worker.postMessage({
+        id: 2,
+        type: 'open',
+        payload: {
+            accountDir: CONFIG.ACCOUNT_DIR,
+            hexKey: CONFIG.HEX_KEY
+        }
+    });
+});
+}
 
 // ================= [ 3. 消息同步逻辑 ] =================
 
@@ -334,30 +408,4 @@ const server = http.createServer((req, res) => {
         res.writeHead(404);
         res.end('Not Found');
     }
-});
-
-// 启动本地网关 → 链式点火
-server.listen(CONFIG.PORT, CONFIG.HOST, () => {
-    console.log('⚙️ [WeMessage] 正在从 config.json 读取配置并初始化核心驱动...');
-
-    // 第一发：注入路径
-    worker.postMessage({
-        id: 1,
-        type: 'setPaths',
-        payload: {
-            resourcesPath: CONFIG.RESOURCES_PATH,
-            userDataPath: CONFIG.ACCOUNT_DIR
-        }
-    });
-
-    // 第二发：解密开锁
-    console.log('🔑 [WeMessage] 正在尝试使用密钥解密并打开微信数据库...');
-    worker.postMessage({
-        id: 2,
-        type: 'open',
-        payload: {
-            accountDir: CONFIG.ACCOUNT_DIR,
-            hexKey: CONFIG.HEX_KEY
-        }
-    });
 });
