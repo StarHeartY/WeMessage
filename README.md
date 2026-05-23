@@ -2,6 +2,8 @@
 
 微信消息 Windows 通知助手。通过 WCDB API 监控微信新消息，并通过 Windows 原生通知推送。
 
+本项目基于[WeFlow](https://github.com/hicccc77/WeFlow)制作，原项目地址：<https://github.com/hicccc77/WeFlow>
+
 ## 工作原理
 
 ```
